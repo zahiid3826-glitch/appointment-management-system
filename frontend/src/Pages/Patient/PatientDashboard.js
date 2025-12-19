@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Calendar, CheckCircle, Heart, Clock, 
-  Bell, Search, ChevronUp, ChevronDown 
+import React, { useState, useEffect } from 'react';
+import {
+  Calendar, CheckCircle, Clock,
+  Bell, Search, Loader2
 } from 'lucide-react';
 import Sidebar from '../../components/layout/SidebarPatient';
 import Header from '../../components/layout/Header';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
+import axios from 'axios';
 
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all">
@@ -22,76 +20,103 @@ const StatCard = ({ icon: Icon, title, value, color }) => (
 );
 
 const AppointmentCard = ({ appointment }) => {
-  const statusColors = {
-    Confirmed: 'bg-green-100 text-green-800',
-    Pending: 'bg-yellow-100 text-yellow-800',
-    Cancelled: 'bg-red-100 text-red-800',
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all">
+    <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all border border-gray-100">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="bg-blue-100 p-2 rounded-full">
             <Clock className="h-4 w-4 text-blue-600" />
           </div>
           <div>
-            <p className="font-medium text-gray-900">{appointment.type}</p>
-            <p className="text-sm text-gray-600">{appointment.date}</p>
+            <p className="font-medium text-gray-900">Dr. {appointment.doctorid}</p>
+            <p className="text-sm text-gray-600">{formatDate(appointment.timestart)}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-medium text-gray-900">{appointment.time}</p>
-          <span className={`text-xs px-2 py-1 rounded-full ${statusColors[appointment.status]}`}>
+          <p className="font-medium text-gray-900">{formatTime(appointment.timestart)}</p>
+          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
             {appointment.status}
           </span>
         </div>
-      </div>
-      <div className="mt-4 text-right">
-        <button className="text-blue-600 hover:underline">View Prescription</button>
-        {/* You can add another button for download if needed */}
-        {/* <button className="ml-4 text-blue-600 hover:underline">Download Prescription</button> */}
       </div>
     </div>
   );
 };
 
 const PatientDashboardPage = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [allAppointments, setAllAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const healthMetrics = [
-    { date: 'Mon', heartRate: 72, steps: 4500 },
-    { date: 'Tue', heartRate: 76, steps: 5000 },
-    { date: 'Wed', heartRate: 70, steps: 4800 },
-    { date: 'Thu', heartRate: 74, steps: 5200 },
-    { date: 'Fri', heartRate: 68, steps: 4300 },
-    { date: 'Sat', heartRate: 75, steps: 5100 },
-    { date: 'Sun', heartRate: 71, steps: 4600 },
-  ];
+  const patientId = localStorage.getItem("useridloggedin");
 
-  const upcomingAppointments = [
-    { id: 1, type: 'Routine Check-up', date: 'Dec 6, 2024', time: '10:00 AM', status: 'Confirmed' },
-    { id: 2, type: 'Follow-up Visit', date: 'Dec 10, 2024', time: '02:00 PM', status: 'Pending' },
-    { id: 3, type: 'Consultation', date: 'Dec 12, 2024', time: '09:30 AM', status: 'Confirmed' },
-  ];
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const [upcomingRes, allRes] = await Promise.all([
+        axios.get("http://localhost:3001/patient/appointments", {
+          params: { patientid: patientId },
+        }),
+        axios.get("http://localhost:3001/patient/appointments/all", {
+          params: { patientid: patientId },
+        }),
+      ]);
+
+      setUpcomingAppointments(upcomingRes.data.appointments || []);
+      setAllAppointments(allRes.data.appointments || []);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completedVisits = allAppointments.filter(
+    apt => apt.status.toLowerCase() === 'completed'
+  ).length;
+
+  const nextAppointment = upcomingAppointments.length > 0
+    ? upcomingAppointments[0]
+    : null;
+
+  const nextAppointmentText = nextAppointment
+    ? `${new Date(nextAppointment.timestart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${new Date(nextAppointment.timestart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+    : 'No upcoming';
 
   const stats = [
-    { icon: Calendar, title: 'Next Appointment', value: 'Dec 6, 10:00 AM', color: 'blue' },
-    { icon: CheckCircle, title: 'Completed Visits', value: '12', color: 'green' },
-    { icon: Heart, title: 'Avg Heart Rate', value: '72 bpm', color: 'red' },
-    { icon: Clock, title: 'Daily Steps Avg', value: '4,800', color: 'yellow' },
+    { icon: Calendar, title: 'Next Appointment', value: nextAppointmentText, color: 'blue' },
+    { icon: CheckCircle, title: 'Completed Visits', value: completedVisits.toString(), color: 'green' },
+    { icon: Clock, title: 'Upcoming', value: upcomingAppointments.length.toString(), color: 'yellow' },
   ];
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className={`fixed top-0 left-0 h-full z-50 ${isSidebarOpen ? 'w-72' : 'w-0'} md:w-72 md:block`}>
-        <Sidebar 
-          isOpen={isSidebarOpen} 
+        <Sidebar
+          isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
           activeTab={"dashboard"}
         />
@@ -100,11 +125,10 @@ const PatientDashboardPage = () => {
         <Header toggleSidebar={toggleSidebar} />
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-                <p className="text-gray-600">Welcome back, Dr. Naveed Ahmed</p>
+                <p className="text-gray-600">Welcome back, Patient</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -123,41 +147,73 @@ const PatientDashboardPage = () => {
               </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <StatCard key={index} {...stat} />
-              ))}
-            </div>
-
-            {/* Health Metrics and Appointments Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Health Metrics */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900 mb-6">Health Metrics</h2>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={healthMetrics}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="date" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="heartRate" stroke="#F87171" fill="#FEE2E2" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-10">
+                <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
+                <span className="ml-2 text-gray-600">Loading dashboard...</span>
               </div>
-
-              {/* Upcoming Appointments */}
-              <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900 mb-6">Your Appointments</h2>
-                <div className="space-y-4">
-                  {upcomingAppointments.map((appointment) => (
-                    <AppointmentCard key={appointment.id} appointment={appointment} />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {stats.map((stat, index) => (
+                    <StatCard key={index} {...stat} />
                   ))}
                 </div>
-              </div>
-            </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-6">Appointment Overview</h2>
+                    {upcomingAppointments.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingAppointments.slice(0, 5).map((appointment) => (
+                          <div key={appointment._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-gray-900">Dr. {appointment.doctorid}</p>
+                              <p className="text-sm text-gray-600">
+                                {new Date(appointment.timestart).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900">
+                                {new Date(appointment.timestart).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                                {appointment.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No upcoming appointments</p>
+                    )}
+                  </div>
+
+                  <div className="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-6">Quick Actions</h2>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => window.location.href = '/patientDashboard/book-appointment'}
+                        className="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition-colors text-left"
+                      >
+                        <Calendar className="inline h-5 w-5 mr-2" />
+                        Book New Appointment
+                      </button>
+                      <button
+                        onClick={() => window.location.href = '/patientDashboard/history'}
+                        className="w-full bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-left"
+                      >
+                        <Clock className="inline h-5 w-5 mr-2" />
+                        View All Appointments
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

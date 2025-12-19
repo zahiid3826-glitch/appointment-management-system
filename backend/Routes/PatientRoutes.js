@@ -1,27 +1,27 @@
 const express = require("express");
 const router = express.Router();
 const {
-  getAvailableSlots,
+  getAvailableSlotsByDate,
   requestAppointment,
+  getPatientAppointments,
+  getAllPatientAppointments,
   cancelAppointment,
   requestRescheduleAppointment,
   viewAppointmentDetails,
 } = require("../Controllers/Patient/patient");
 
-// View Available Slots of Doctors
-router.get("/available", getAvailableSlots);
+router.get("/available-slots", getAvailableSlotsByDate);
 
-// Book Appointment
-router.post("/request", requestAppointment);
+router.post("/appointments", requestAppointment);
 
-// Cancel Appointment
-router.delete("/:appointmentid/cancel", cancelAppointment);
+router.get("/appointments", getPatientAppointments);
 
-// Request for reschedule appointment
+router.get("/appointments/all", getAllPatientAppointments);
+
+router.put("/:appointmentid/cancel", cancelAppointment);
+
 router.put("/:appointment_id/reschedule", requestRescheduleAppointment);
 
-// View Appointment Details
 router.get("/:appointmentid/details", viewAppointmentDetails);
-
 
 module.exports = router;

@@ -27,7 +27,7 @@ const Login = () => {
 
             // Navigate based on role
             if (user.role === 'patient') {
-                navigate('/Patdashboard');
+                navigate('/patientDashboard/dashboard');
             } else if (user.role === 'doctor') {
                 navigate('/docDashboard');
             } else if (user.role === 'receptionist') {
