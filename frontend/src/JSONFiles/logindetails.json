@@ -1,0 +1,32 @@
+[
+    {
+        "username": "patient1",
+        "_id": "patient1",
+        "password": "123456",
+        "role": "patient"
+    },
+    {
+        "_id": "doctor123",
+        "username": "doctor123",
+        "password": "1234567",
+        "role": "doctor"
+    },
+    {
+        "username": "receptionist1",
+        "_id": "receptionist1",
+        "password": "12345678",
+        "role": "receptionist"
+    },
+    {
+        "_id": "doctor124",
+        "username": "doctorWilson",
+        "password": "123456",
+        "role": "doctor"
+    },
+    {
+        "_id": "doctor1234",
+        "username": "doctor1234",
+        "password": "123456",
+        "role": "doctor"
+    }
+]
